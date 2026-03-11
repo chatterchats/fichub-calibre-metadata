@@ -1,5 +1,9 @@
-# tests/stubs/calibre/ebooks/metadata/sources/base.py
+"""Minimal typed Source class used by tests and type checking."""
+
+from typing import Any
+
+
 class Source:
-    def __init__(self):
-        # the plugin looks at self.browser; tests can assign a fake later
-        self.browser = None
+    def __init__(self) -> None:
+        # The plugin calls self.browser.open_novisit(...); tests inject a fake object.
+        self.browser: Any = None

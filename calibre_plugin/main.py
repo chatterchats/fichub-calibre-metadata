@@ -43,7 +43,6 @@ class FicHub(Source):  # type: ignore[misc]
             'pubdate',
             'comments',
             'languages',
-            'identifier:fichub',
             'identifier:fichub_id',
             'identifier:ao3',
             'identifier:ffnet',
@@ -72,15 +71,7 @@ class FicHub(Source):  # type: ignore[misc]
     ) -> tuple[str, str, str] | None:
         story_url: str | None = self._extract_story_url(identifiers or {})
         if story_url:
-            return ('fichub', story_url, story_url)
-        return None
-
-    def id_from_url(self, url: Any) -> tuple[str, str] | None:  # pyright: ignore[reportIncompatibleMethodOverride]
-        if not isinstance(url, str):
-            return None
-        txt: str = url.strip()
-        if self.URL_RE.match(txt):
-            return ('fichub', txt)
+            return ('url', story_url, story_url)
         return None
 
     def identify(

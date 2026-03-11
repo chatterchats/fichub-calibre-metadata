@@ -34,12 +34,12 @@ changelog = "https://github.com/chatterchats/fichub-calibre-metadata/blob/master
 
 [dependency-groups]
 dev = [
-    "mypy>=1.11",
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.8.0",
     "pre-commit>=4.0",
-    ]
+    "pyright>=1.1.408",
+]
 
 [tool.ruff]
 line-length = 120
@@ -72,12 +72,20 @@ junit_family = "xunit2"
 xfail_strict = true
 # you can also add markers, etc.
 
-[tool.mypy]
-python_version = "3.12"
-strict = true
-files = ["calibre_plugin"]
-ignore_missing_imports = true
-exclude = "tests/stubs/.*"
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["calibre_plugin"]
+exclude = ["tests/stubs"]
+executionEnvironments = [{ root = ".", extraPaths = ["tests/stubs"] }]
+reportMissingImports = false
+reportMissingModuleSource = false
+reportMissingTypeStubs = false
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownMemberType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
 
 [tool.coverage.run]
 branch = true
