@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate plugin files
+        run: |
+          test -f calibre_plugin/__init__.py
+          test -f calibre_plugin/main.py
+          test -f calibre_plugin/plugin-import-name-fichub.txt
+
+      - name: Syntax check
+        run: |
+          python -m compileall -q calibre_plugin
+
+      - name: Build plugin ZIP
+        run: |
+          mkdir -p dist
+          cd calibre_plugin
+          zip -r ../dist/FicHub_Metadata_Source.zip __init__.py main.py plugin-import-name-fichub.txt
+
+      - name: Validate ZIP contents
+        run: |
+          python - <<'PY'
+          import zipfile
+
+          expected = {
+              '__init__.py',
+              'main.py',
+              'plugin-import-name-fichub.txt',
+          }
+          with zipfile.ZipFile('dist/FicHub_Metadata_Source.zip') as zf:
+              names = set(zf.namelist())
+
+          missing = sorted(expected - names)
+          if missing:
+              raise SystemExit(f'Missing files in ZIP: {missing}')
+          print('ZIP validated successfully')
+          PY
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FicHub_Metadata_Source
+          path: dist/FicHub_Metadata_Source.zip
+          if-no-files-found: error

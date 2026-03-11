@@ -1,0 +1,100 @@
+[project]
+name = "fichub-calibre-metadata"
+version = "0.1.0"
+description = "Calibre metadata source plugin for fanfiction sites via the FicHub API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+author = [
+    { name = "Chatterchats", email = "Chats Irby <chats@irby.us>" }
+]
+keywords = [
+    "calibre",
+    "fanfiction",
+    "metadata",
+    "fichub",
+    "ao3",
+    "fanfiction-net",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.urls]
+source = "https://github.com/chatterchats/fichub-calibre-metadata"
+issues = "https://github.com/chatterchats/fichub-calibre-metadata/issues"
+changelog = "https://github.com/chatterchats/fichub-calibre-metadata/blob/master/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8.0",
+    "pre-commit>=4.0",
+    ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+    "tests/stubs/**",
+    "dist",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP"]
+
+[tool.ruff.format]
+quote-style = "single"
+line-ending = "lf"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+]
+# Common and additional pytest options
+log_cli = true
+log_cli_level = "INFO"
+python_files = ["test_*.py"]
+junit_family = "xunit2"
+xfail_strict = true
+# you can also add markers, etc.
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["calibre_plugin"]
+ignore_missing_imports = true
+exclude = "tests/stubs/.*"
+
+[tool.coverage.run]
+branch = true
+source = ["calibre_plugin"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+# additional reporting options
+# branch coverage is configured under [tool.coverage.run]
+
+[tool.coverage.html]
+directory = "htmlcov"
+# title = "Coverage report"
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.coverage.paths]
+source = ["src"]
