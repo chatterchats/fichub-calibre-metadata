@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on Keep a Changelog, and this project follows Semantic Versioning.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
@@ -25,7 +25,7 @@ The format is based on Keep a Changelog, and this project follows Semantic Versi
 
 - Fixed pytest import-path setup by using absolute paths in `tests/conftest.py`, ensuring `calibre_plugin` and `tests/stubs` resolve consistently regardless of working directory.
 
-## [0.1.0] - 2026-03-10
+## [0.1.0](https://github.com/chatterchats/fichub-calibre-metadata/releases/tag/v0.1.0) - 2026-03-10
 
 ### Added
 
