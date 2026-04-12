@@ -243,9 +243,8 @@ def test_identify_returns_errors_and_cleans_metadata(plugin: FicHub, monkeypatch
 
     cleaned: list[Any] = []
 
-    def clean(mi: Any) -> Any:
+    def clean(mi: Any) -> None:
         cleaned.append(mi)
-        return mi
 
     monkeypatch.setattr(plugin, 'clean_downloaded_metadata', clean)
 

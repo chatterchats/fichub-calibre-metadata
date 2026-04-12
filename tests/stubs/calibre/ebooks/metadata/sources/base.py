@@ -8,5 +8,5 @@ class Source:
         # The plugin calls self.browser.open_novisit(...); tests inject a fake object.
         self.browser: Any = None
 
-    def clean_downloaded_metadata(self, mi: Any) -> Any:
-        return mi
+    def clean_downloaded_metadata(self, mi: Any) -> None:
+        del mi
