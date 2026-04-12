@@ -55,7 +55,7 @@ class FicHub(Source):  # type: ignore[misc]
 
     name: str = 'FicHub'
     author: str = 'Chatterchats'
-    version: tuple[int, int, int] = (0, 1, 1)
+    version: tuple[int, int, int] = (0, 1, 2)
     minimum_calibre_version: tuple[int, int, int] = (2, 80, 0)
     description: str = 'Fetches fanfiction metadata from FicHub API'
     capabilities: frozenset[str] = frozenset({'identify'})
