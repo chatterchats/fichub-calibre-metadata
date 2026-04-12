@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -53,6 +54,7 @@ class FicHub(Source):  # type: ignore[misc]
     """
 
     name: str = 'FicHub'
+    author: str = 'Chatterchats'
     version: tuple[int, int, int] = (0, 1, 0)
     minimum_calibre_version: tuple[int, int, int] = (2, 80, 0)
     description: str = 'Fetches fanfiction metadata from FicHub API'
@@ -85,6 +87,11 @@ class FicHub(Source):  # type: ignore[misc]
     MAX_RETRIES: int = 5
     INITIAL_BACKOFF: int = 60
     MAX_RETRY_AFTER: int = 300
+    AO3_URL_RE: re.Pattern[str] = re.compile(r'^https?://(?:www\.)?archiveofourown\.org/works/(\d+)(?:[/?#].*)?$', re.I)
+    FFNET_URL_RE: re.Pattern[str] = re.compile(
+        r'^https?://(?:www\.)?fanfiction\.net/s/(\d+)(?:/\d+)?(?:[/?#].*)?$',
+        re.I,
+    )
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the FicHub metadata source plugin.
@@ -133,9 +140,48 @@ class FicHub(Source):  # type: ignore[misc]
             ``("url", story_url, story_url)`` when a URL is found; otherwise
             ``None``.
         """
-        story_url = self._extract_story_url(identifiers or {})
+        identifiers = identifiers or {}
+
+        ao3_id = identifiers.get(self.IDENTIFIER_AO3)
+        if ao3_id:
+            ao3_id_str = str(ao3_id).strip()
+            if ao3_id_str:
+                return self.IDENTIFIER_AO3, ao3_id_str, f'https://archiveofourown.org/works/{ao3_id_str}'
+
+        ffnet_id = identifiers.get(self.IDENTIFIER_FFNET)
+        if ffnet_id:
+            ffnet_id_str = str(ffnet_id).strip()
+            if ffnet_id_str:
+                return self.IDENTIFIER_FFNET, ffnet_id_str, f'https://www.fanfiction.net/s/{ffnet_id_str}/1'
+
+        story_url = self._extract_story_url(identifiers)
         if story_url:
+            parsed = self.id_from_url(story_url)
+            if parsed is not None:
+                id_type, id_value = parsed
+                return id_type, id_value, story_url
             return 'url', story_url, story_url
+        return None
+
+    def get_book_url_name(self, idtype: str, idval: str, url: str) -> str:
+        """Return a human-readable label for a book URL."""
+        del idval, url
+        if idtype == self.IDENTIFIER_AO3:
+            return 'Archive of Our Own'
+        if idtype == self.IDENTIFIER_FFNET:
+            return 'FanFiction.net'
+        return 'Story page'
+
+    def id_from_url(self, url: str) -> tuple[str, str] | None:
+        """Parse a supported source URL into a source identifier tuple."""
+        ao3_match = self.AO3_URL_RE.match(url)
+        if ao3_match:
+            return self.IDENTIFIER_AO3, ao3_match.group(1)
+
+        ffnet_match = self.FFNET_URL_RE.match(url)
+        if ffnet_match:
+            return self.IDENTIFIER_FFNET, ffnet_match.group(1)
+
         return None
 
     def identify(
@@ -147,7 +193,7 @@ class FicHub(Source):  # type: ignore[misc]
         authors: list[str] | None = None,
         identifiers: dict[str, Any] | None = None,
         timeout: int = 60,
-    ) -> None:
+    ) -> str | None:
         """Identify a story and enqueue its metadata result.
 
         This is the main calibre entry point for metadata lookup. The method
@@ -171,8 +217,8 @@ class FicHub(Source):  # type: ignore[misc]
             timeout (int): Request timeout in seconds.
 
         Returns:
-            None: The method enqueues results as a side effect and does not
-            return a value.
+            str | None: ``None`` on success, otherwise a user-displayable error
+            string.
         """
         self.log = log
         self.timeout = timeout
@@ -182,40 +228,44 @@ class FicHub(Source):  # type: ignore[misc]
         self._metadata_mapper.log = log
 
         if abort.is_set():
-            return
+            return None
 
         identifiers = (identifiers or {}).copy()
 
         story_url = self._extract_story_url(identifiers)
         if not story_url:
+            err = 'No supported story URL found in identifiers'
             if log and hasattr(log, 'error'):
-                log.error('FicHub: No URL found in identifiers; expected `url:` or URL-like identifier value')
-            return
+                log.error('FicHub: %s', err)
+            return err
 
         payload, err = self._fetch_metadata(log, story_url, timeout, abort)
 
         if err:
             if log and hasattr(log, 'error'):
                 log.error('FicHub: metadata fetch failed: %s', err)
-            return
+            return err
 
         if abort.is_set():
-            return
+            return None
 
         if not isinstance(payload, dict):
+            err = 'FicHub returned an unexpected response payload'
             if log and hasattr(log, 'error'):
-                log.error('FicHub: Unexpected API payload (not an object)')
-            return
+                log.error('FicHub: %s', err)
+            return err
 
         mi = self._to_metadata(payload, story_url, log)
         if mi is None:
-            return
+            return 'FicHub returned incomplete metadata for this story'
 
         if abort.is_set():
-            return
+            return None
 
+        mi = self.clean_downloaded_metadata(mi)
         mi.source_relevance = 0
         result_queue.put(mi)
+        return None
 
     def _extract_story_url(self, identifiers: dict[str, Any] | None) -> str | None:
         """Extract a story URL from a set of identifiers.

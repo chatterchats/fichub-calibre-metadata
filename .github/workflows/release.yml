@@ -52,11 +52,48 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare stripped plugin sources
+        run: |
+          python - <<'PY'
+          import ast
+          import pathlib
+          import shutil
+
+          src_dir = pathlib.Path("calibre_plugin")
+          build_dir = pathlib.Path("build/release_plugin")
+          shutil.rmtree(build_dir, ignore_errors=True)
+          build_dir.mkdir(parents=True, exist_ok=True)
+
+          def strip_docstrings(node: ast.AST) -> ast.AST:
+              for child in ast.walk(node):
+                  if isinstance(child, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                      body = getattr(child, "body", None)
+                      if body and isinstance(body[0], ast.Expr):
+                          value = body[0].value
+                          if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                              body.pop(0)
+              return node
+
+          for path in src_dir.iterdir():
+              if path.is_dir():
+                  continue
+              target = build_dir / path.name
+              if path.suffix != ".py":
+                  shutil.copy2(path, target)
+                  continue
+
+              source = path.read_text(encoding="utf-8")
+              tree = ast.parse(source, filename=str(path))
+              tree = strip_docstrings(tree)
+              stripped = ast.unparse(tree) + "\n"
+              target.write_text(stripped, encoding="utf-8", newline="\n")
+          PY
+
       - name: Build plugin ZIP
         run: |
           mkdir -p dist
-          cd calibre_plugin
-          zip -r ../dist/FicHub_Metadata_Source.zip __init__.py main.py plugin-import-name-fichub.txt
+          cd build/release_plugin
+          zip -r ../dist/FicHub_Metadata_Source.zip __init__.py main.py http.py metadata.py plugin-import-name-fichub.txt
 
       - name: Validate ZIP contents
         run: |
@@ -66,6 +103,8 @@ jobs:
           expected = {
               '__init__.py',
               'main.py',
+              'http.py',
+              'metadata.py',
               'plugin-import-name-fichub.txt',
           }
           with zipfile.ZipFile('dist/FicHub_Metadata_Source.zip') as zf:

@@ -26,6 +26,8 @@ jobs:
         run: |
           test -f calibre_plugin/__init__.py
           test -f calibre_plugin/main.py
+          test -f calibre_plugin/http.py
+          test -f calibre_plugin/metadata.py
           test -f calibre_plugin/plugin-import-name-fichub.txt
 
       - name: Syntax check
@@ -36,7 +38,7 @@ jobs:
         run: |
           mkdir -p dist
           cd calibre_plugin
-          zip -r ../dist/FicHub_Metadata_Source.zip __init__.py main.py plugin-import-name-fichub.txt
+          zip -r ../dist/FicHub_Metadata_Source.zip __init__.py main.py http.py metadata.py plugin-import-name-fichub.txt
 
       - name: Validate ZIP contents
         run: |
@@ -46,6 +48,8 @@ jobs:
           expected = {
               '__init__.py',
               'main.py',
+              'http.py',
+              'metadata.py',
               'plugin-import-name-fichub.txt',
           }
           with zipfile.ZipFile('dist/FicHub_Metadata_Source.zip') as zf:

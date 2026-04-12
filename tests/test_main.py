@@ -36,6 +36,14 @@ class DummyAbort:
         return self._is_set_result
 
 
+class DummyQueue:
+    def __init__(self) -> None:
+        self.items: list[Any] = []
+
+    def put(self, item: Any) -> None:
+        self.items.append(item)
+
+
 @pytest.fixture
 def plugin() -> FicHub:
     return FicHub()
@@ -68,6 +76,28 @@ def test_source_identifier_key(plugin: FicHub) -> None:
     assert plugin._source_identifier_key('https://fanfiction.net.example/s/1/1') is None
     assert plugin._source_identifier_key('https://unknown.com') is None
     assert plugin._source_identifier_key(None) is None
+
+
+def test_id_from_url(plugin: FicHub) -> None:
+    assert plugin.id_from_url('https://archiveofourown.org/works/123') == (plugin.IDENTIFIER_AO3, '123')
+    assert plugin.id_from_url('https://www.fanfiction.net/s/456/1/title') == (plugin.IDENTIFIER_FFNET, '456')
+    assert plugin.id_from_url('https://example.com/story/1') is None
+
+
+def test_get_book_url_uses_source_identifiers(plugin: FicHub) -> None:
+    assert plugin.get_book_url({'ao3': '123'}) == ('ao3', '123', 'https://archiveofourown.org/works/123')
+    assert plugin.get_book_url({'ffnet': '456'}) == ('ffnet', '456', 'https://www.fanfiction.net/s/456/1')
+    assert plugin.get_book_url({'url': 'https://archiveofourown.org/works/123'}) == (
+        'ao3',
+        '123',
+        'https://archiveofourown.org/works/123',
+    )
+
+
+def test_get_book_url_name(plugin: FicHub) -> None:
+    assert plugin.get_book_url_name('ao3', '123', 'https://archiveofourown.org/works/123') == 'Archive of Our Own'
+    assert plugin.get_book_url_name('ffnet', '456', 'https://www.fanfiction.net/s/456/1') == 'FanFiction.net'
+    assert plugin.get_book_url_name('url', 'x', 'https://example.com') == 'Story page'
 
 
 def test_is_html(plugin: FicHub) -> None:
@@ -198,3 +228,37 @@ def test_fetch_metadata_stops_when_aborted(plugin: FicHub, monkeypatch: pytest.M
     payload, err = plugin._fetch_metadata(lambda *args, **kwargs: None, 'https://foo', timeout=1, abort=abort)
     assert payload is None
     assert err == 'Request aborted'
+
+
+def test_identify_returns_errors_and_cleans_metadata(plugin: FicHub, monkeypatch: pytest.MonkeyPatch) -> None:
+    queue = DummyQueue()
+    abort = DummyAbort()
+
+    class DummyLog:
+        def __call__(self, *args: Any, **kwargs: Any) -> None:
+            del args, kwargs
+
+        def error(self, *args: Any, **kwargs: Any) -> None:
+            del args, kwargs
+
+    cleaned: list[Any] = []
+
+    def clean(mi: Any) -> Any:
+        cleaned.append(mi)
+        return mi
+
+    monkeypatch.setattr(plugin, 'clean_downloaded_metadata', clean)
+
+    err = plugin.identify(DummyLog(), queue, abort, identifiers={})
+    assert err == 'No supported story URL found in identifiers'
+
+    plugin.browser = DummyBrowser([DummyBrowserResponse(200, json.dumps({'ret': 0, 'title': 'x'}).encode('utf-8'))])
+    err = plugin.identify(
+        DummyLog(),
+        queue,
+        abort,
+        identifiers={'url': 'https://archiveofourown.org/works/1'},
+    )
+    assert err is None
+    assert len(queue.items) == 1
+    assert cleaned
