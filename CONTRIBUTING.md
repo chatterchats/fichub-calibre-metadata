@@ -1,43 +1,87 @@
 # Contributing
 
-Thanks for contributing to this project.
+Thanks for contributing.
 
-## Development Setup
+## Scope
 
-1. Install Calibre 2.80+.
-2. Use Python 3.12 locally to match CI.
-3. Clone the repository and create a virtual environment if needed.
+This repository builds a calibre metadata source plugin that fetches fanfiction metadata through FicHub. Changes should preserve compatibility with calibre's metadata source plugin APIs and the plugin ZIP layout used by the release workflow.
 
-## Local Validation
+## Development Environment
 
-Run these checks before opening a pull request:
+- Use Python `3.12+`
+- Use `uv` for dependency management
+- Use `prek` for local hooks
 
-```powershell
-python -m compileall -q calibre_plugin
+Set up the environment:
+
+```bash
+uv sync
+uv run prek install
 ```
 
-```powershell
-mkdir dist
-Compress-Archive -Path calibre_plugin\__init__.py,calibre_plugin\main.py,calibre_plugin\plugin-import-name-fichub.txt -DestinationPath dist\FicHub_Metadata_Source.zip -Force
+
+## Validate Before Opening a PR
+
+Run the full local checks before submitting changes.
+
+```bash
+uv lock --check
+uv run ruff check calibre_plugin tests
+uv run ruff format --check calibre_plugin tests
+uv run pyright
+uv run pytest -q
 ```
 
-## Pull Request Process
 
-1. Fork the repo and create a branch from `master`.
-2. Keep changes focused and include tests or validation steps where possible.
-3. Update documentation when behavior changes.
-4. Open a pull request with:
-   - A clear summary of what changed
-   - Why the change is needed
-   - How you validated it
+## Build the Plugin ZIP Locally
+
+The plugin ZIP must include all runtime files from `calibre_plugin/`.
+
+Linux/macOS:
+
+```bash
+mkdir -p dist
+(
+  cd calibre_plugin &&
+  zip -r ../dist/FicHub_Metadata_Source.zip \
+    __init__.py main.py http.py metadata.py plugin-import-name-fichub.txt
+)
+```
+
+Windows PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force dist | Out-Null
+Compress-Archive `
+  -Path `
+    calibre_plugin\__init__.py,`
+    calibre_plugin\main.py,`
+    calibre_plugin\http.py,`
+    calibre_plugin\metadata.py,`
+    calibre_plugin\plugin-import-name-fichub.txt `
+  -DestinationPath dist\FicHub_Metadata_Source.zip `
+  -Force
+```
 
 ## Coding Guidelines
 
-- Keep plugin behavior compatible with Calibre metadata source APIs.
-- Prefer small, readable functions and explicit error handling.
-- Do not commit generated artifacts or local environment files.
+- Keep runtime behavior compatible with calibre plugin expectations
+- Prefer explicit error handling over silent failure
+- Add or update tests for behavior changes
+- Keep release-only transformations in CI/workflows, not in tracked source
+- Do not commit generated artifacts from `dist/`, `build/`, or local tool caches
 
-## Release Notes
+## Pull Requests
 
-- User-visible changes should be added under `Unreleased` in `CHANGELOG.md`.
-- Maintainers cut releases by pushing tags that match `v*` (example: `v0.1.0`).
+When opening a PR:
+
+1. Keep the change focused
+2. Explain what changed and why
+3. List the validation commands you ran
+4. Update `README.md`, `CONTRIBUTING.md`, or `CHANGELOG.md` when behavior or workflow changes
+
+## Releases and Changelog
+
+- Add user-visible unreleased changes to `CHANGELOG.md`
+- Releases are published from tags matching `v*`
+- Release ZIPs are assembled by GitHub Actions, not by hand-edited committed artifacts

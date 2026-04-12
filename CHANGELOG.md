@@ -6,24 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Changed
-
-- Migrated type checking from `mypy` to `pyright` across development tooling:
-  - replaced `mypy` with `pyright` in `pyproject.toml` dev dependencies
-  - switched the local pre-commit type-check hook to `uv run pyright`
-  - added project-level `tool.pyright` configuration for strict checking with local test stubs
-  - refreshed `uv.lock` to remove mypy-related packages and include pyright
-- Updated plugin URL identifier handling in `FicHub`:
-  - `get_book_url()` now returns the `url` identifier key
-  - removed legacy `id_from_url()` override as overrid method is unused.
-  - dropped `identifier:fichub` from `touched_fields`
-- Improved tests and local stubs for stricter static typing:
-  - added explicit typing to test doubles and test functions in `tests/test_main.py`
-  - added typed signatures/attributes in `tests/stubs/calibre/*` helper modules
+## [0.1.2](https://github.com/chatterchats/fichub-calibre-metadata/releases/tag/v0.1.2) - 2026-04-11
 
 ### Fixed
 
-- Fixed pytest import-path setup by using absolute paths in `tests/conftest.py`, ensuring `calibre_plugin` and `tests/stubs` resolve consistently regardless of working directory.
+- Fixed a calibre integration bug where `identify()` reassigned the result of `clean_downloaded_metadata()` even though calibre mutates metadata objects in place and may return `None`.
+- Prevented successful FicHub API lookups from failing during result queueing after metadata cleanup.
+
+### Changed
+
+- Updated CI and release workflows to use newer GitHub Actions versions compatible with the current runner runtime.
+- Fixed the release workflow ZIP output path for the stripped plugin build directory.
+- Expanded `.gitignore` coverage for generated local artifacts.
+
+## [0.1.1](https://github.com/chatterchats/fichub-calibre-metadata/releases/tag/v0.1.1) - 2026-04-11
+
+### Changed
+
+- Migrated local type checking from `mypy` to `pyright`.
+- Refactored the plugin into dedicated `http.py` and `metadata.py` modules while keeping `main.py` as the calibre entry point.
+- Modernized local tooling around `uv`, `ruff`, `pytest`, `pyright`, and `prek`.
+- Added release packaging support for the refactored runtime files.
+- Normalized tracked text file formatting across repository metadata and workflow files.
+
+### Fixed
+
+- Improved retry, abort, and metadata mapping behavior around FicHub API requests.
+- Added calibre-facing URL integration with `id_from_url()` and `get_book_url_name()`.
+- Returned user-facing errors from `identify()` and cleaned downloaded metadata before queueing results.
+- Strengthened test stubs and regression coverage for the updated plugin behavior.
 
 ## [0.1.0](https://github.com/chatterchats/fichub-calibre-metadata/releases/tag/v0.1.0) - 2026-03-10
 

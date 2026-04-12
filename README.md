@@ -1,313 +1,178 @@
-# FicHub Metadata Source for Calibre
+# FicHub Metadata Source for calibre
 
-Automatic fanfiction metadata fetching for Calibre from multiple sources via the [FicHub API](https://fichub.net/).
+Metadata download plugin for [calibre](https://calibre-ebook.com/) that fetches fanfiction metadata through the [FicHub API](https://fichub.net/).
 
-**Supported Platforms:** Archive of Our Own (AO3), FanFiction.net (FFNet), and other sources through FicHub
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Supported Metadata Fields](#supported-metadata-fields)
-- [Identifier Priority](#identifier-priority)
-- [Error Handling](#error-handling)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-- [Support](#support)
-
----
+It currently targets Archive of Our Own and FanFiction.net URLs explicitly, while still accepting any FicHub-supported story URL as an input identifier.
 
 ## Features
 
-- **Multi-source support**: Fetches metadata from AO3, FanFiction.net, and other platforms via FicHub
-- **Rich metadata extraction**: Titles, authors, publication dates, tags, series information, and more
-- **Smart author parsing**: Handles single and multiple authors, with intelligent parsing
-- **Automatic retry logic**: Exponential backoff for transient API failures
-- **Platform detection**: Automatically identifies and tags metadata with source platform
-- **Enhanced comments**: Includes story statistics (chapters, words, status) and AO3 engagement metrics
-- **Series support**: Extracts and maps series information with proper indexing
-- **Language detection**: Automatically detects and normalizes story language
-- **Tag deduplication**: Intelligent collection and deduplication of story tags and metadata
-
----
+- Download story metadata from FicHub using a calibre metadata source plugin
+- Support AO3 and FanFiction.net identifier extraction for better calibre URL integration
+- Map title, authors, tags, publisher, publication date, language, comments, series, and source-specific identifiers
+- Retry transient API failures with backoff and abort-aware cancellation
+- Render rich HTML comments with story stats and extra metadata
 
 ## Requirements
 
-- **Calibre 2.80.0+** (older versions may not work)
-- **Python 3.6+** (included with Calibre)
-- **Internet connection** (for API calls to FicHub)
-
----
+- calibre `2.80.0+`
+- Python `3.12+` for local development
+- Internet access to `https://fichub.net/api/v0/meta`
 
 ## Installation
 
-### From Source
+### Install a released plugin ZIP
 
-1. **Clone or download this repository**
+1. Download `FicHub_Metadata_Source.zip` from the latest release.
+2. In calibre, open `Preferences` -> `Plugins` -> `Load plugin from file`.
+3. Select the ZIP file and restart calibre.
+4. Enable `FicHub` in `Preferences` -> `Metadata download` -> `Customize metadata sources`.
 
-2. **Create a plugin zip file** with the plugin root files:
+### Build a plugin ZIP from source
 
-   ```powershell
-   # From the FicHub directory
-   Compress-Archive -Path calibre_plugin\__init__.py,calibre_plugin\main.py,calibre_plugin\plugin-import-name-fichub.txt `
-     -DestinationPath FicHub_Metadata_Source.zip -Force
-   ```
+The plugin ZIP must contain these files from `calibre_plugin/`:
 
-3. **Load into Calibre**:
-   - Open Calibre → `Preferences` → `Plugins` → `Load plugin from file`
-   - Select `FicHub_Metadata_Source.zip`
-   - Restart Calibre
+- `__init__.py`
+- `main.py`
+- `http.py`
+- `metadata.py`
+- `plugin-import-name-fichub.txt`
 
-4. **Enable in metadata sources**:
-   - Open Calibre → `Preferences` → `Metadata download` → `Customize metadata sources`
-   - Check the `FicHub` plugin
-   - Optionally reorder sources by priority
+Linux/macOS:
 
-### Verify Installation
+```bash
+mkdir -p dist
+(
+  cd calibre_plugin &&
+  zip -r ../dist/FicHub_Metadata_Source.zip \
+    __init__.py main.py http.py metadata.py plugin-import-name-fichub.txt
+)
+```
 
-The plugin is correctly installed if:
+Windows PowerShell:
 
-- It appears in `Preferences → Plugins → Installed Plugins` as "FicHub"
-- It's listed in the metadata download sources
-
----
+```powershell
+New-Item -ItemType Directory -Force dist | Out-Null
+Compress-Archive `
+  -Path `
+    calibre_plugin\__init__.py,`
+    calibre_plugin\main.py,`
+    calibre_plugin\http.py,`
+    calibre_plugin\metadata.py,`
+    calibre_plugin\plugin-import-name-fichub.txt `
+  -DestinationPath dist\FicHub_Metadata_Source.zip `
+  -Force
+```
 
 ## Usage
 
-### Basic Workflow
+### Add a supported story identifier
 
-1. **Add a book** or edit an existing book in your library
-2. **Open the "Edit metadata"** dialog
-3. **Add a story URL** to the book's identifiers:
-   - Click the "Identifiers" edit button
-   - Add `url:` followed by your story URL
-   - Example: `url:https://archiveofourown.org/works/12345678`
-4. **Download metadata** using the metadata download feature:
-   - Click the book
-   - `Edit metadata` → `Download metadata`
-   - Select `FicHub` as the source
-5. **Review and apply** the fetched metadata
+In calibre, add one of the following identifiers to a book:
 
-### Supported URL Formats
+- `url:https://archiveofourown.org/works/12345678`
+- `url:https://www.fanfiction.net/s/1234567/1/Story-Title`
 
-```text
-https://archiveofourown.org/works/12345678
-https://www.fanfiction.net/s/5782108/1/Story-Title
-https://forums.spacebattles.com/threads/story.12345/
-https://www.tthfanfic.org/story.php?id=123456
+The plugin also scans `uri` and `fichub`, then falls back to any identifier value containing an `http://` or `https://` URL.
+
+### Download metadata
+
+1. Select the book in calibre.
+2. Open `Edit metadata` -> `Download metadata`.
+3. Let calibre query the `FicHub` source.
+4. Review the returned metadata and apply it.
+
+## Metadata Mapped
+
+The plugin currently declares these touched fields:
+
+- `title`
+- `authors`
+- `tags`
+- `series`
+- `series_index`
+- `publisher`
+- `pubdate`
+- `comments`
+- `languages`
+- `identifier:fichub_id`
+- `identifier:ao3`
+- `identifier:ffnet`
+
+It also uses calibre URL integration helpers so calibre can associate AO3 and FanFiction.net story IDs with canonical story URLs.
+
+## Development
+
+### Tooling
+
+This project uses:
+
+- `uv` for environment and lockfile management
+- `pytest` for tests
+- `ruff` for linting and formatting
+- `pyright` for static typing
+- `prek` for git hooks
+
+Install the dev environment with `uv`:
+
+```bash
+uv sync
 ```
 
----
+### Common commands
 
-## Configuration
+Run tests:
 
-### Identifier Priority
-
-The plugin scans identifiers in this priority order:
-
-1. `url` - Direct URL identifier (highest priority)
-2. `uri` - Alternative URL identifier  
-3. `fichub` - FicHub-specific identifier
-4. Any other identifier containing a valid URL
-
-**Example identifiers in Calibre:**
-
-```text
-url:https://archiveofourown.org/works/123456
-uri:https://www.fanfiction.net/s/5782108/1/
-fichub:https://fichub.com/fic/123456
+```bash
+uv run pytest -q
 ```
 
-### Advanced Features
 
-#### Automatic Retry Logic
+Run linting:
 
-- Transient API failures are automatically retried up to 5 attempts
-- Uses exponential backoff starting at 60 seconds
-- HTTP 429 rate-limiting honors `Retry-After` (capped at 5 minutes plus a small buffer)
-- Only retries network errors and upstream failures
-- Permanent errors (404 not found) fail immediately
 
-#### Metadata Processing
+```bash
+uv run ruff check calibre_plugin tests
+uv run ruff format --check calibre_plugin tests
+```
 
-- Authors are intelligently parsed from single strings or lists
-- Tags are deduplicated while preserving original casing
-- Series indices are converted to floating-point numbers
-- Publication dates are normalized across different source formats
-- Descriptions are automatically wrapped in HTML if needed
+Run type checking:
 
----
+```bash
+uv run pyright
+```
 
-## Supported Metadata Fields
 
-| Field | Source | Notes |
-| --- | --- | --- |
-| **Title** | `title` / `rawExtendedMeta.title` | Primary identifier |
-| **Authors** | `author` / `authors` | Supports multiple authors |
-| **Publication Date** | `created` / `rawExtendedMeta.published` | Normalized to UTC |
-| **Language** | `rawExtendedMeta.language` | Auto-normalized to Calibre format |
-| **Publisher** | Source domain | Maps AO3, FFNet, etc. |
-| **Series** | `series` / `rawExtendedMeta.series` | With optional index |
-| **Tags** | Multiple fields | Fandoms, genres, characters, warnings, etc. |
-| **Comments** | Description + stats | HTML-formatted with metadata block |
-| **Identifiers** | See section below | Platform-specific and FicHub IDs |
+Install hooks:
 
-### Extracted Identifiers
+```bash
+uv run prek install
+```
 
-| Identifier | Value | Source |
-| --- | --- | --- |
-| `fichub` | Full story URL | FicHub metadata |
-| `fichub_id` | FicHub internal ID | FicHub metadata |
-| `ao3` | AO3 work ID | For Archive of Our Own works |
-| `ffnet` | FFNet story ID | For FanFiction.net stories |
 
----
+## CI and Releases
 
-## Error Handling
-
-The plugin implements robust error handling:
-
-### API Error Codes
-
-| Code | Meaning | Action |
-| --- | --- | --- |
-| `ret=0` | Success | Metadata extracted |
-| `ret=1` | Upstream error | Retried with backoff |
-| `ret=2` | Not found | Fails immediately (no retry) |
-| Network error | Connection failed | Retried with backoff |
-
-### Common Error Messages
-
-#### "FicHub: No URL found in identifiers"
-
-- Solution: Add a URL to the book's identifiers (see [Usage](#usage) section)
-
-#### "FicHub: unable to load fic"
-
-- Solution: Verify the URL is correct and accessible
-- Check if the story has been deleted or made private
-
-#### "FicHub: Fic not found"
-
-- Solution: The story URL may be malformed or the story doesn't exist
-- Try accessing the URL directly in a browser
-
-#### Network timeout
-
-- Solution: Check your internet connection
-- The plugin will automatically retry using configured backoff
-
----
+- CI validates plugin files, compiles the package, and builds a plugin ZIP
+- Releases are triggered from tags matching `v*`
+- The release workflow copies plugin sources into a temporary build directory and strips Python docstrings before creating the release ZIP
 
 ## Troubleshooting
 
-### No metadata returned
+### calibre says no metadata was found
 
-1. **Verify book URL:**
-   - Make sure the identifier is `url:https://...` (with the `url:` prefix)
-   - Copy the identifier exactly from the story page
+- Confirm the story URL works in a browser
+- Confirm the identifier is present in calibre
+- Prefer `url:` identifiers for direct story URLs
+- Check calibre's job details/log output for the plugin-specific error message
 
-2. **Check Calibre logs**
-   - `Preferences → Miscellaneous → Log viewer`
-   - Search for "FicHub" to see plugin messages
+### The API works manually but calibre still fails
 
-3. **Test the URL**
-   - Paste the URL in a browser to verify it's accessible
-   - Try the FicHub API directly: `https://fichub.net/api/v0/meta?q=YOUR_URL`
-
-### Incomplete metadata
-
-Some stories may not have all fields available:
-
-- Not all platforms provide publication dates
-- Series information is only available on certain sites
-- Language detection depends on platform data
-
-### Plugin crashes or errors
-
-1. Ensure you're running **Calibre 2.80.0 or later**
-2. Check the Calibre log viewer for detailed error messages
-3. Try removing and reinstalling the plugin (see [Installation](#installation))
-
-### Performance issues
-
-- Metadata download respects the FicHub API rate limits
-- If requests are slow, the FicHub service may be under load
-- The plugin includes smart retry logic for transient failures
-
----
+- Make sure the installed plugin ZIP is current
+- If the plugin version shown in calibre does not match the latest tag, remove and reinstall the plugin ZIP
 
 ## Contributing
 
-Contributions are welcome.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and pull request expectations.
-For vulnerability reports, see [SECURITY.md](SECURITY.md).
-
-### Development Notes
-
-- The plugin uses Calibre's Source plugin API
-- Metadata extraction is handled by the `_to_metadata()` method
-- Error handling is built into `_fetch_metadata()` with retry logic
-
-### CI/CD
-
-This repository includes GitHub Actions workflows under `.github/workflows/`:
-
-- `ci.yml`: Runs on pull requests and pushes to `main`/`master`. It validates plugin files, checks Python syntax, builds the plugin ZIP, and uploads it as a workflow artifact.
-- `release.yml`: Runs on tag pushes matching `v*` and can also be run manually from the Actions tab. It builds `FicHub_Metadata_Source.zip` and attaches it to a GitHub Release.
-
-To publish a release:
-
-1. Create and push a version tag (for example `v0.1.0`)
-2. GitHub Actions will build and publish the ZIP automatically
-
----
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and contribution expectations.
 
 ## License
 
-This project is licensed under the **GPL v3** License - see [LICENSE](LICENSE) file for details.
-
-This is compatible with Calibre's plugin system which also uses GPL.
-
----
-
-## Support
-
-### Getting Help
-
-- **See troubleshooting above** for common issues
-- **Check Calibre's log viewer** for detailed error messages
-- **Verify your internet connection** if API calls are failing
-
-### Reporting Issues
-
-When reporting an issue, please include:
-
-- Calibre version (Help → About Calibre)
-- Plugin version (visible in Preferences → Plugins)
-- The story URL you're trying to fetch
-- Relevant error messages from the Calibre log viewer
-- Steps to reproduce the issue
-
-### FicHub API
-
-For information about the FicHub API itself, visit
-
-- **FicHub Home**: [https://fichub.net/](https://fichub.net/)
-- **API Endpoint Reference**: [https://fichub.net/api](https://fichub.net/api)
-
----
-
-## Related Projects
-
-- [Calibre](https://calibre-ebook.com/) - E-book management system
-- [FicHub](https://fichub.net/) - Fanfiction metadata aggregation API
-- [Archive of Our Own](https://archiveofourown.org/) - Fanfiction archive
-- [FanFiction.net](https://www.fanfiction.net/) - Fanfiction archive
+Licensed under GPL-3.0-only. See [LICENSE](LICENSE).
