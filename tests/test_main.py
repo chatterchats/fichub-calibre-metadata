@@ -28,6 +28,14 @@ class DummyBrowser:
         return next(self._responses)
 
 
+class DummyAbort:
+    def __init__(self, is_set_result: bool = False) -> None:
+        self._is_set_result = is_set_result
+
+    def is_set(self) -> bool:
+        return self._is_set_result
+
+
 @pytest.fixture
 def plugin() -> FicHub:
     return FicHub()
@@ -57,6 +65,7 @@ def test_normalize_url_candidate(plugin: FicHub) -> None:
 def test_source_identifier_key(plugin: FicHub) -> None:
     assert plugin._source_identifier_key('https://archiveofourown.org/works/1') == plugin.IDENTIFIER_AO3
     assert plugin._source_identifier_key('https://www.fanfiction.net/s/1/1') == plugin.IDENTIFIER_FFNET
+    assert plugin._source_identifier_key('https://fanfiction.net.example/s/1/1') is None
     assert plugin._source_identifier_key('https://unknown.com') is None
     assert plugin._source_identifier_key(None) is None
 
@@ -98,8 +107,21 @@ def test_to_metadata_basic(plugin: FicHub) -> None:
     assert mi is not None
     assert mi.title == 'T'
     assert mi.language == 'en'
+    assert mi.languages == ['en']
     # payload id is in rawExtendedMeta so it becomes an ao3 identifier
     assert mi._identifiers.get('ao3') == '123'
+
+
+def test_to_metadata_non_dict_raw_meta(plugin: FicHub) -> None:
+    payload: dict[str, Any] = {
+        'title': 'T',
+        'rawExtendedMeta': ['unexpected'],
+        'source': 'https://archiveofourown.org/works/1',
+    }
+    mi = plugin._to_metadata(payload, 'https://archiveofourown.org/works/1', log=None)
+    assert mi is not None
+    assert mi.title == 'T'
+    assert mi._identifiers == {}
 
 
 def test_fetch_metadata_success(plugin: FicHub) -> None:
@@ -148,3 +170,31 @@ def test_fetch_metadata_retry_and_rate_limit(plugin: FicHub, monkeypatch: pytest
     assert err is None
     assert payload is not None
     assert payload['title'] == 'y'
+
+
+def test_fetch_metadata_retries_server_errors(plugin: FicHub, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('time.sleep', lambda seconds: None)
+    plugin.browser = DummyBrowser(
+        [
+            DummyBrowserResponse(500, json.dumps({'ret': 0}).encode('utf-8')),
+            DummyBrowserResponse(200, json.dumps({'ret': 0, 'title': 'z'}).encode('utf-8')),
+        ]
+    )
+    payload, err = plugin._fetch_metadata(lambda *args, **kwargs: None, 'https://foo', timeout=1)
+    assert err is None
+    assert payload is not None
+    assert payload['title'] == 'z'
+
+
+def test_fetch_metadata_stops_when_aborted(plugin: FicHub, monkeypatch: pytest.MonkeyPatch) -> None:
+    abort = DummyAbort(is_set_result=True)
+
+    def fail_sleep(seconds: float) -> None:
+        raise AssertionError(f'should not sleep when aborted, got {seconds}')
+
+    monkeypatch.setattr('time.sleep', fail_sleep)
+
+    plugin.browser = DummyBrowser([DummyBrowserResponse(500, json.dumps({'ret': 0}).encode('utf-8'))])
+    payload, err = plugin._fetch_metadata(lambda *args, **kwargs: None, 'https://foo', timeout=1, abort=abort)
+    assert payload is None
+    assert err == 'Request aborted'

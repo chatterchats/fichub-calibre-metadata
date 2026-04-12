@@ -15,6 +15,7 @@ class Metadata:
         self.pubdate: datetime | None = None
         self.comments: str | None = None
         self.language: str | None = None
+        self.languages: list[str] = []
         self.source_relevance: int = 0
         self._identifiers: dict[str, str] = {}
 
