@@ -1,6 +1,15 @@
+default_stages: [pre-commit]
+fail_fast: false
+
 repos:
   - repo: local
     hooks:
+      - id: uv-lock-check
+        name: uv lock --check
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix --exit-non-zero-on-fix
@@ -25,3 +34,4 @@ repos:
         language: system
         pass_filenames: false
         types_or: [python, pyi]
+        stages: [pre-push, manual]

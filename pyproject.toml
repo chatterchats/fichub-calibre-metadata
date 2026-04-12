@@ -1,13 +1,18 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
 [project]
 name = "fichub-calibre-metadata"
 version = "0.1.0"
 description = "Calibre metadata source plugin for fanfiction sites via the FicHub API"
 readme = "README.md"
 requires-python = ">=3.12"
+dependencies = []
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
-author = [
-    { name = "Chatterchats", email = "Chats Irby <chats@irby.us>" }
+authors = [
+    { name = "Chatterchats", email = "chats@irby.us" }
 ]
 keywords = [
     "calibre",
@@ -25,67 +30,74 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Utilities",
 ]
-dependencies = []
 
 [project.urls]
-source = "https://github.com/chatterchats/fichub-calibre-metadata"
-issues = "https://github.com/chatterchats/fichub-calibre-metadata/issues"
-changelog = "https://github.com/chatterchats/fichub-calibre-metadata/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/chatterchats/fichub-calibre-metadata"
+Repository = "https://github.com/chatterchats/fichub-calibre-metadata"
+Issues = "https://github.com/chatterchats/fichub-calibre-metadata/issues"
+Changelog = "https://github.com/chatterchats/fichub-calibre-metadata/blob/master/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-cov>=6.0",
     "ruff>=0.8.0",
-    "pre-commit>=4.0",
+    "prek>=0.3.8",
     "pyright>=1.1.408",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["calibre_plugin"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/calibre_plugin",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+    "/.pre-commit-config.yaml",
 ]
 
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-exclude = [
-    "tests/stubs/**",
-    "dist",
-    "__pycache__",
-]
+required-version = ">=0.15.5,<0.16"
+src = ["calibre_plugin", "tests"]
+extend-exclude = ["dist", "__pycache__", "tests/stubs/**"]
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "UP"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["calibre_plugin"]
+
 [tool.ruff.format]
 quote-style = "single"
 line-ending = "lf"
+docstring-code-format = true
 
 [tool.pytest.ini_options]
-minversion = "8.0"
-addopts = "-ra --strict-config --strict-markers"
+minversion = "9.0"
+addopts = "-ra --strict-config --strict-markers --cov=calibre_plugin --cov-branch --cov-report=term-missing:skip-covered --no-cov-on-fail"
 testpaths = ["tests"]
-filterwarnings = [
-    "error",
-]
-# Common and additional pytest options
-log_cli = true
-log_cli_level = "INFO"
 python_files = ["test_*.py"]
+filterwarnings = ["error"]
 junit_family = "xunit2"
 xfail_strict = true
-# you can also add markers, etc.
 
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["calibre_plugin"]
-exclude = ["tests/stubs"]
+exclude = [".venv", "dist", "__pycache__"]
 executionEnvironments = [{ root = ".", extraPaths = ["tests/stubs"] }]
-reportMissingImports = false
 reportMissingModuleSource = false
 reportMissingTypeStubs = false
-reportUnknownArgumentType = false
-reportUnknownLambdaType = false
-reportUnknownMemberType = false
-reportUnknownParameterType = false
-reportUnknownVariableType = false
 
 [tool.coverage.run]
 branch = true
@@ -94,15 +106,13 @@ source = ["calibre_plugin"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-# additional reporting options
-# branch coverage is configured under [tool.coverage.run]
+sort = "Cover"
 
 [tool.coverage.html]
 directory = "htmlcov"
-# title = "Coverage report"
 
 [tool.coverage.xml]
 output = "coverage.xml"
 
 [tool.coverage.paths]
-source = ["src"]
+source = ["calibre_plugin", "*/site-packages/calibre_plugin"]

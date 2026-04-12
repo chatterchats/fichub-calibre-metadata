@@ -15,3 +15,8 @@ dist/
 # Editors and IDEs
 .vscode/
 .idea/
+
+.coverage
+.coverage.*
+*.cov
+*.coverage
