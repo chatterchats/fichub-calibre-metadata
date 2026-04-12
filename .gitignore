@@ -11,6 +11,7 @@ dist/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+build/
 
 # Editors and IDEs
 .vscode/
