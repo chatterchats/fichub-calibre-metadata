@@ -38,7 +38,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ steps.tag.outputs.tag }}
@@ -48,7 +48,7 @@ jobs:
           git rev-parse "refs/tags/${{ steps.tag.outputs.tag }}" >/dev/null
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -93,7 +93,7 @@ jobs:
         run: |
           mkdir -p dist
           cd build/release_plugin
-          zip -r ../dist/FicHub_Metadata_Source.zip __init__.py main.py http.py metadata.py plugin-import-name-fichub.txt
+          zip -r ../../dist/FicHub_Metadata_Source.zip __init__.py main.py http.py metadata.py plugin-import-name-fichub.txt
 
       - name: Validate ZIP contents
         run: |
